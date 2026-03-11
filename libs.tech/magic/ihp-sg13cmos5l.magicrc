@@ -54,8 +54,9 @@ source [file dirname [file normalize [info script]]]/ihp-sg13cmos5l.tcl
 # load bind keys (optional)
 # source [file dirname [file normalize [info script]]]/ihp-sg13cmos5l-BindKeys
 
-# set units to microns
-units microns
+# set units to microns (warning:  this may break scripts that have not
+# been updated to expect the use of the "units" command)
+# units microns
 
 # set sg13cmos5l standard power, ground, and substrate names
 set VDD VDD
