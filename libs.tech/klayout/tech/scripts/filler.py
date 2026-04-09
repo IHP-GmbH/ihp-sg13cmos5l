@@ -48,7 +48,13 @@ for disabled, area in scripts:
         print(f"Skip {area} fill because disabled by argument")
     else:
         print(f"Start filling {area}")
-        path = pathlib.Path(os.environ['PDK_ROOT']) / pathlib.Path(os.environ['PDK']) / f"libs.tech/klayout/tech/macros/sg13cmos5l_filler_{area}.lym"
+        if "PDK_ROOT" in os.environ and "PDK" in os.environ: 
+            path = pathlib.Path(os.environ['PDK_ROOT']) / pathlib.Path(os.environ['PDK']) / f"libs.tech/klayout/tech/macros/sg13cmos5l_filler_{area}.lym"
+        elif "IHP_TECH" in os.environ: 
+            path = pathlib.Path(os.environ['IHP_TECH']) / f"klayout/tech/macros/sg13cmos5l_filler_{area}.lym" 
+        else:
+            print(f"Couldn't find sg13cmos5l_filler_{area}.lym, please define environment variable PDK_ROOT & PDK or IHP_TECH (IHP_TECH should point to /localpath/ihp-sg13cmos5l/libs.tech)")
+            exit()
         pya.Macro(path).run()
 
 layout=pya.CellView.active().layout()
