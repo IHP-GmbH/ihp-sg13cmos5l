@@ -46,9 +46,8 @@ proc sg13cmos5l::diode_convert {parameters} {
     dict for {key value} $parameters {
 	switch -nocase $key {
 	    l -
-	    w -
-	    peri {
-		# Length, width, and perimeter are converted to units of microns
+	    w {
+		# Length and width are converted to units of microns
 		set value [magic::spice2float $value]
 		set value [expr $value * 1e6]
 		set value [magic::3digitpastdecimal $value]

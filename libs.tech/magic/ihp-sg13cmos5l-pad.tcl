@@ -35,6 +35,12 @@ proc sg13cmos5l::bondpad_convert {parameters} {
 		dict set pdkparams width $value
 		dict set pdkparams height $value
 	    }
+	    shape {
+		# To be completed; model is currently incomplete
+	    }
+	    padtype {
+		# To be completed; model is currently incomplete
+	    }
 	    default {
 		# Allow unrecognized parameters to be passed unmodified
 		dict set pdkparams $key $value
