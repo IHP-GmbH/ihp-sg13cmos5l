@@ -19,7 +19,7 @@
   # Automatic filler generation script for Active/GatPoly
   # SG13CMOS5L PDK: CMOS-only, M1-M4-TM1 metal stack
 
-  # Active layers
+ # Active layers
   Activ = source.input("1/0")
   Activ_filler = source.input("1/22")
   Activ_nofill = source.input("1/23")
@@ -37,40 +37,105 @@
   NWell = source.input("31/0")
   PWell_block = source.input("46/21")
   EdgeSeal = source.input("39/0")
+  prBoundary = source.input("189/0")
+  
+  
+  ## specify different sizes between bloc and chip
+  sizes = {
+  	active: {
+  		chip: {
+  			width: 3.4,
+  			length: 3.4,
+  			spacing_h: 1.6,
+  			spacing_v: 1.6,
+  			offset_h: 0,
+  			offset_v: 2.5,
+  			origin_x: -0.8,
+  			origin_y: 0
+  		},
+  		bloc: {
+  			width: 1.0,
+  			length: 1.33,
+  			spacing_h: 1.87,
+  			spacing_v: 0.17,
+  			offset_h: 4.32,
+  			offset_v: 0,
+  			origin_x: 0,
+  			origin_y: 0
+  		}
+  	},
+  	gat: {
+  		chip: {
+  			width: 5.0,
+  			length: 1.4,
+  			spacing_h: 5.0,
+  			spacing_v: 1.1,
+  			offset_h: 5,
+  			offset_v: 0,
+  			origin_x: 0,
+  			origin_y: -1
+  		},
+  		bloc: {
+  			width: 1.36,
+  			length: 0.7,
+  			spacing_h: 1.51,
+  			spacing_v: 0.8,
+  			offset_h: 4.32,
+  			offset_v: 0,
+  			origin_x: 0.18,
+  			origin_y: -0.315
+  		}
+  	}
+  
+  }
+  
+  
+  
+  layout = RBA::CellView.active.layout
 
   # Fill exclusion area
+  mode  = layout.cell("GatP_FILL_CELL_0") == nil ? 0 : 1 # running the fillers second time will use the small models
+  path = mode == 0? :chip : :bloc
 
   cellframe1 = EdgeSeal.holes
+  
+  if cellframe1.area == 0
+  	cellframe1 = prBoundary
+  end
+  
+  puts "cell frame area: #{cellframe1.area}"
 
   ##########################################################################
   # CREATE DUMMY FILL PATTERNS FOR ALL LEVELS
   ##########################################################################
 
   # Active fill pattern
-  act_fill = fill_pattern("Act_FILL_CELL")
-  width = 3.4
-  length = 3.4
-  spacing_h = width + 1.6
-  spacing_v = length + 1.6
-  offset_h = 0
-  offset_v = 2.5
+  act_fill = fill_pattern("Act_FILL_CELL_#{mode}")
+  width = sizes[:active][path][:width]
+  length = sizes[:active][path][:length]
+  spacing_h = width + sizes[:active][path][:spacing_h]
+  spacing_v = length + sizes[:active][path][:spacing_v]
+  offset_h = sizes[:active][path][:offset_h]
+  offset_v = sizes[:active][path][:offset_v]
   act_fill.shape(1, 22, box(0, 0, width, length))
 
   # GatPoly fill pattern
-  gp_fill = fill_pattern("GatP_FILL_CELL")
-  gp_width = 5
-  gp_length = 1.4
-  gp_spacing_h = gp_width + 5
-  gp_spacing_v = gp_length + 1.1
-  gp_offset_h = 5
-  gp_offset_v = 0
+  gp_fill = fill_pattern("GatP_FILL_CELL_#{mode}")
+  gp_width = sizes[:gat][path][:width]
+  gp_length = sizes[:gat][path][:length]
+  gp_spacing_h = gp_width + sizes[:gat][path][:spacing_h]
+  gp_spacing_v = gp_length + sizes[:gat][path][:spacing_v]
+  gp_offset_h = sizes[:gat][path][:offset_h]
+  gp_offset_v = sizes[:gat][path][:offset_v]
+  #puts gp_spacing_h
   gp_fill.shape(5, 22, box(0, 0, gp_width, gp_length))
 
-  act_fill.origin(-0.8, 0)
-  act_fill.dim(5, 3.4)
+  act_fill.origin(sizes[:active][path][:origin_x], sizes[:active][path][:origin_y])
+  #act_fill.dim(5, 3.4)
+  act_fill.dim(sizes[:gat][path][:width], sizes[:active][path][:length])
 
-  gp_fill.origin(0, -1)
-  gp_fill.dim(5, 3.4)
+  gp_fill.origin(sizes[:gat][path][:origin_x], sizes[:gat][path][:origin_y])
+  gp_fill.dim(sizes[:gat][path][:width], sizes[:active][path][:length])
 
   ##########################################################################
   # CREATE Activ FILLER
@@ -140,17 +205,19 @@
 
   exclLayGatP = GFil_c | GFil_d | GFil_e | GatPoly_nofill
 
-  ActoutGatP = exclLayGatP - exclLayAct
-  GatPoutAct = exclLayAct - exclLayGatP
+  ActoutGatP = exclLayGatP - exclLayAct #not used
+  GatPoutAct = exclLayAct - exclLayGatP #not used
 
 
   # perform fill
   #vstep=spacing_v
   #hstep=spacing_h
 
-  org_x = 2000.0
-  org_y = org_x
-  (cellframe1-exclLayAct-exclLayGatP).fill(act_fill, hstep(spacing_h, offset_v), vstep(offset_h, spacing_v))
-  (cellframe1-exclLayGatP-exclLayAct).fill(gp_fill, hstep(gp_spacing_h, gp_offset_v), vstep(gp_offset_h, gp_spacing_v))
+  org_x = 2000.0 #not used
+  org_y = org_x #not used
+  fill_area = cellframe1-exclLayAct-exclLayGatP
+  fill_area.fill(act_fill, hstep(spacing_h, offset_v), vstep(offset_h, spacing_v))
+  fill_area.fill(gp_fill, hstep(gp_spacing_h, gp_offset_v), vstep(gp_offset_h, gp_spacing_v))
+  
 </text>
 </klayout-macro>
