@@ -522,7 +522,7 @@ if prboundary_count > 0
 else
   if edgeseal_count > 0
     #chip_for_density = edgeseal_bound
-    chip_for_density = edgeseal_drw.holes
+    chip_for_density = edgeseal_drw.holes | edgeseal_drw
     if chip_for_density.count == 0
       logger.warn("EdgeSeal.drawing (39/0) has no holes. Using EdgeSeal.drowing box directly (39/0) for density area instead.")
       chip_for_density = edgeseal_drw
