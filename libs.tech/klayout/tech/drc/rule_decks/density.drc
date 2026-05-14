@@ -137,7 +137,7 @@ polygons_count = 0
 logger.info('Read in polygons from layers.')
 
 def get_polygons(layer, data_type)
-  ps = polygons(layer, data_type)
+  ps = polygons(layer, data_type).flatten # To fix the overlapping object double counting, we must flatten the polygons.
   $run_mode == 'deep' ? ps : ps.merged
 end
 
