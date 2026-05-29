@@ -137,7 +137,7 @@ polygons_count = 0
 logger.info('Read in polygons from layers.')
 
 def get_polygons(layer, data_type)
-  ps = polygons(layer, data_type)
+  ps = polygons(layer, data_type).flatten # To fix the overlapping object double counting, we must flatten the polygons.
   $run_mode == 'deep' ? ps : ps.merged
 end
 
@@ -232,6 +232,7 @@ prboundary_count = prboundary_drw.count
 logger.info("prboundary_drw has #{prboundary_count} polygons")
 
 edgeseal_bound = get_polygons(39, 4)
+edgeseal_drw = get_polygons(39, 0)
 edgeseal_count = edgeseal_bound.count
 logger.info("edgeseal_bound has #{edgeseal_count} polygons")
 
@@ -520,10 +521,22 @@ if prboundary_count > 0
   logger.info("Using prBoundary (189/0) for chip area: #{chip_area} um^2.")
 else
   if edgeseal_count > 0
-    chip_for_density = edgeseal_bound
+    #chip_for_density = edgeseal_bound
+    chip_for_density = edgeseal_drw.holes | edgeseal_drw
+    if chip_for_density.count == 0
+      logger.warn("EdgeSeal.drawing (39/0) has no holes. Using EdgeSeal.drowing box directly (39/0) for density area instead.")
+      chip_for_density = edgeseal_drw
+    end
+
+    if chip_for_density.count == 0
+      logger.error("No valid polygons found for chip area extraction from EdgeSeal layers (39/4 holes or 39/0). Cannot compute density.")
+      raise 'No valid polygons found for chip area extraction from EdgeSeal layers (39/4 holes or 39/0). Cannot compute density. You need to drow an EdgeSeal drowing (39/0)  around your chip to use it for density area, or enable sanity checks to get markers for debugging.'
+    end
+
     chip_source = 'edgeseal'
     chip_area = chip_for_density.area
-    logger.info("Using EdgeSeal.boundary (39/4) for chip area: #{chip_area} um^2.")
+    #logger.info("Using EdgeSeal.boundary (39/4) for chip area: #{chip_area} um^2.")
+    logger.info("Using EdgeSeal.drawing(holes) (39/4) for chip area: #{chip_area} um^2.")
   else
     chip_for_density = CHIP
     chip_source = 'extent'
