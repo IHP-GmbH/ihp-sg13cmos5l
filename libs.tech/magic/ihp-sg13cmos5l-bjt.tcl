@@ -43,18 +43,20 @@ proc sg13cmos5l::bipolar_convert {parameters} {
     dict for {key value} $parameters {
 	switch -nocase $key {
 	    m {
-		 dict set pdkparams nx $value
+		dict set pdkparams nx $value
 	    }
 	    we {
 		# Convert value to microns
 		set value [magic::spice2float $value]
 		set value [expr $value * 1e6]
+		set value [magic::3digitpastdecimal $value]
 		dict set pdkparams w $value
 	    }
 	    le {
 		# Convert value to microns
 		set value [magic::spice2float $value]
 		set value [expr $value * 1e6]
+		set value [magic::3digitpastdecimal $value]
 		dict set pdkparams l $value
 	    }
 	    default {
@@ -166,7 +168,19 @@ proc sg13cmos5l::pnpMPA_draw {parameters} {
 	    bulk		"C" \
     ]
     set drawdict [dict merge $sg13cmos5l::ruleset $newdict $parameters]
-    return [sg13cmos5l::diode_draw $drawdict]
+    set result [sg13cmos5l::diode_draw $drawdict]
+
+    # Add the "pnpMPA" device name as a label on comment (LVS text)
+    pushbox
+    box values 0 0 0 0
+    set w [dict get $parameters w]
+    set hw [/ $w 2.0]
+    box move e ${hw}um
+    box move e 1.22um
+    label pnpMPA c -comment
+    popbox
+
+    return result
 }
 
 #----------------------------------------------------------------
