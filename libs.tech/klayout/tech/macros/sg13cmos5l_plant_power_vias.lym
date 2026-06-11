@@ -1,0 +1,464 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description>Plant Power VIAS</description>
+ <version>1.0</version>
+ <category/>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>false</autorun>
+ <autorun-early>false</autorun-early>
+ <priority>0</priority>
+ <shortcut/>
+ <show-in-menu>true</show-in-menu>
+ <group-name>User_Dev</group-name>
+ <menu-path>sg13cmos5l_menu&gt;end("SG13CMOS5L PDK").end</menu-path>
+ <interpreter>ruby</interpreter>
+ <dsl-interpreter-name/>
+ <text>module ViaAutoInserter
+  include RBA
+
+  # Configuration: Update these to match your exact PCell details
+  PCELL_LIB_NAME = "SG13_dev"      # Replace with the library containing your PCell
+  PCELL_NAME     = "via_stack"        # Replace with your modified PCell name
+
+
+  def self.encode_pcell_string(str)
+    ## Klayout is use the C++ API to call the python pcells, 
+    ## When i pass params from the Ruby code to the Python PCell
+    ## Its encode it in binary
+    ##    For example, if I pass "Metal1" from Ruby, the Python PCell receives it as b'Metal1'
+    ## so i need to encode the string in Ruby to match this format, to make sure the PCell can read the parameters correctly
+    str.to_s.encode('UTF-8')
+  end
+
+
+  def self.get_layer_region(cell, layer_index)
+    ## GET ALL SHAPES ON A LAYER AS A SINGLE MERGED REGION
+    region = RBA::Region.new
+    return region if layer_index.nil?
+
+    # Using begin_shapes_rec retrieves flattened geometry without duplicating the layout
+    iter = cell.begin_shapes_rec(layer_index)
+    # while !iter.at_end?
+    #   if iter.shape.is_polygon? || iter.shape.is_box? || iter.shape.is_path?
+        
+    #     region.insert(iter.shape.polygon)
+    #   end
+    #   iter.next
+    # end
+    region.insert(iter)
+    region.merge
+    #region
+  end
+  
+  def self.get_labeled_region(cell, layout, layer, label_name)
+    ## GET ALL SHAPES ON A LAYER THAT TOUCH A SPECIFIC TEXT LABEL
+    points = RBA::Region.new
+    ## Here to not force the user to put the label on a specific purpose, I will search for the label on all purposes of the layer
+    ## So we will extract all the text labels on all purposes of the layer, then find all the polygons on the standard drawing purpose (e.g., 126/0 for TM1) that touch any of these text labels
+    layer_infos = layout.layer_infos.select { |li| li.layer == layer }
+    layer_infos.each do |li|
+      layer_idx = layout.layer(li)
+      iter = cell.begin_shapes_rec(layer_idx)
+      while !iter.at_end?
+        if iter.shape.is_text? &amp;&amp; iter.shape.text.string == label_name
+          # 1. Grab the transformation matrix from the subcell to the top cell
+          t = iter.trans 
+          
+          # # 2. Create a point from the text's local subcell coordinates
+          local_pt = RBA::Point.new(iter.shape.text.x, iter.shape.text.y)
+          
+          # # 3. Transform the point into the top cell's coordinate space
+          top_pt = t.trans(local_pt)
+          
+          # # 4. Insert the properly translated box
+          # # size the point to a small box, because select_interacting did not detect single point.
+          points.insert(RBA::Box.new(top_pt.x-1, top_pt.y-1, top_pt.x+1, top_pt.y+1))
+          # points.insert(iter.shape.text.bbox)
+          
+        end
+        iter.next
+      end
+    end
+    #points.merge
+
+    metal_drawing_idx = layout.layer(layer, 0)
+    metal_drawing = get_layer_region(cell, metal_drawing_idx)
+    # puts "Total M#{layer} drawing area: #{metal_drawing.area}"
+    # puts "Total '#{label_name}' text counts: #{points.count}"
+
+    # 3. Return only metal polygons that physically touch the text label
+    metal = metal_drawing.select_interacting(points)
+    # puts "Area of M#{layer} polygons interacting with '#{label_name}' text: #{metal.area}"
+    metal
+    
+  end
+
+  def self.fix_grid(um, grid = 0.01)
+    # Adjust the value to the nearest selected grid
+    (um / grid).round * grid
+  end
+
+
+  def self.get_labeled_region_old(cell, layout, layer, label_name)
+    ## Older version of get_labled region
+    ## TO REMOVE LATER, KEEP FOR REFERENCE
+    texts_object = RBA::Texts.new
+    tm1_layer_infos = layout.layer_infos.select { |li| li.layer == layer } # TM1 layer
+
+    # 1. Find all specific text labels on any TM1 purpose
+    tm1_layer_infos.each do |li|
+      layer_idx = layout.layer(li)
+      iter = cell.begin_shapes_rec(layer_idx)
+      while !iter.at_end?
+        if iter.shape.is_text? &amp;&amp; iter.shape.text.string == label_name
+          texts_object.insert(iter.shape.text)
+        end
+        iter.next
+      end
+    end
+
+    # 2. Extract standard TM1 drawing polygons (126/0)
+    tm1_drawing_idx = layout.layer(layer, 0)
+    tm1_drawing = get_layer_region(cell, tm1_drawing_idx)
+    puts "Total M#{layer} drawing area: #{tm1_drawing.area}"
+    puts "Total '#{label_name}' text counts: #{texts_object.count}"
+
+    # 3. Return only TM1 polygons that physically touch the text label
+    metal = tm1_drawing.interacting(texts_object)
+    puts "Area of M#{layer} polygons interacting with '#{label_name}' text: #{metal.area}"
+    metal
+  end
+
+  def self.run_insertion(label_name)
+    ## Get the active layout and cellview
+    app = RBA::Application.instance
+    mw = app.main_window
+    lv = mw.current_view
+    raise "No active layout view" if lv.nil?
+
+    layout = lv.active_cellview.layout
+    cell = lv.active_cellview.cell
+    dbu = layout.dbu
+
+    # 1. Define IHP Layer Indices
+    layer_m1  = layout.layer(8, 0)
+    layer_m2  = layout.layer(10, 0)
+    layer_m3  = layout.layer(30, 0)
+    layer_m4  = layout.layer(50, 0)
+    layer_tm1  = layout.layer(126, 0)
+    
+    # Via layers (for connection checking)
+    layer_v1  = layout.layer(19, 0)
+    layer_v2  = layout.layer(29, 0)
+    layer_v3  = layout.layer(49, 0)
+    layer_tv1 = layout.layer(125, 0)
+
+    # 2. Extract Geometry Regions
+    puts "Extracting geometry..."
+    ## Get all the M1 polygons labled with the specific label_name.
+    m1_reg  = get_labeled_region(cell, layout, 8, label_name)
+    puts "got m1 area: #{m1_reg.area}"
+    ## Get all the metal layers / vias regions to avoid short circtuits / DRC errors
+    m2_reg  = get_layer_region(cell, layer_m2)
+    m3_reg  = get_layer_region(cell, layer_m3)
+    m4_reg  = get_layer_region(cell, layer_m4)
+    tm1_reg = get_layer_region(cell, layer_tm1)
+    
+    v1_reg  = get_layer_region(cell, layer_v1)
+    v2_reg  = get_layer_region(cell, layer_v2)
+    v3_reg  = get_layer_region(cell, layer_v3)
+    tv1_reg = get_layer_region(cell, layer_tv1)
+
+    ## Get the initial TM1 region that labled with the spcific label_name
+    tm1_labeled_reg = get_labeled_region(cell, layout, 126, label_name)
+   # Initialize the M4 net as an empty region
+    m4_labeled_reg = RBA::Region.new
+
+    # Via-Aware Geometric Net Extraction
+    ## Here i need to detect the Power Grid, and avoid running a full LVS
+    ## to detect the connectivity
+    ## so i used this simple process
+    ## starting with the TM1 polygons that labled with the label_name
+    ## get all the TV1 vias that touch these TM1 polygons
+    ## then add all the M4 polygons that touch these TV1 vias
+    ## keep looping until the previous count of polygons is the same as the new count, which means we have found all the connected TM1 and M4 polygons through the TV1 vias
+    ## the first iteration will find the initial TM1, and add all the connected M4 with it,
+    ## so all the M4 cols/rows will be added to the M4 net
+    ## then check the newly added M4 polygons the get the TV1 connected to them
+    ## and add any new TM1 polygons that touch these TV1 vias, which will expand the TM1 net
+    ## so that we can get the TM1 polygons that are connected to the M4 net through the TV1 vias, 
+    ## and also get the M4 polygons that are connected to the TM1 net through the TV1 vias
+    ## In only one iteration,
+    ## The loop is only for confimation.
+    loop do
+      prev_count = tm1_labeled_reg.count + m4_labeled_reg.count
+
+      # 1. Find the actual TV1 via shapes that touch the known TM1 net
+      valid_vias_on_tm1 = tv1_reg.interacting(tm1_labeled_reg)
+      
+      # 2. Add any M4 polygons that physically touch these specific vias
+      m4_labeled_reg = m4_labeled_reg | m4_reg.interacting(valid_vias_on_tm1)
+      
+      # 3. Find the actual TV1 via shapes that touch the newly expanded M4 net
+      valid_vias_on_m4 = tv1_reg.interacting(m4_labeled_reg)
+      
+      # 4. Add any TM1 polygons that physically touch these specific vias
+      tm1_labeled_reg = tm1_labeled_reg | tm1_reg.interacting(valid_vias_on_m4)
+
+      # Stop if no new polygons were added to either layer
+      break if (tm1_labeled_reg.count + m4_labeled_reg.count) == prev_count
+    end
+    puts "got tm1 area: #{tm1_labeled_reg.area}"
+    # 3. Boolean Logic
+    # Obstacles: Any intermediate metal layer
+    obstacles = (m2_reg | m3_reg | m4_reg | tv1_reg) #&amp; tm1_labeled_reg
+    m4_obstacles = (m2_reg | m3_reg) #&amp; m4_labeled_reg
+    #via_obstacles = (v1_reg | v2_reg | v3_reg) &amp; tm1_labeled_reg
+    
+
+    # Existing Vias: Any existing via in the stack
+    existing_vias = v1_reg | v2_reg | v3_reg
+    drc_m4_spacing_um = 0.34 
+    spacing_dbu = (drc_m4_spacing_um / dbu).to_i
+    drc_tm1_spacing_um = 1
+    spacing_dbu_tm1 = (drc_tm1_spacing_um / dbu).to_i
+
+    # valid_intersections: Overlap of M1 and Labeled TM1, MINUS intermediate metals
+    ## The sized obstacles is to add the DRC spacing as a safety margin, to avoid placing vias too close to the obstacles.
+    raw_intersections = (m1_reg &amp; tm1_labeled_reg) - obstacles.sized(spacing_dbu_tm1)
+    m4_intersections = (m1_reg &amp; m4_labeled_reg) - m4_obstacles.sized(spacing_dbu)
+
+    # Keep only intersections that DO NOT touch existing vias
+    ## decompose the trapezoids into individual polygons,
+    ## because the trapezoids.bbox returns a full box including the non included area in the polygon
+    ## that will make a U shape be an O chape including the non included top and inside area,
+    ## that will make the via placement think that the whole area is valid for placement, while in reality only the arms of the U shape are valid for placement, 
+    ## and the top and inside area are not valid for placement.
+    unconnected_intersections = raw_intersections.decompose_trapezoids_to_region
+    m4_unconnected_intersections = m4_intersections.decompose_trapezoids_to_region
+    puts "All intersections area: #{(m1_reg &amp; tm1_labeled_reg).area}"
+    puts "Found #{raw_intersections.count} valid, raw intersections."
+    puts "Found #{unconnected_intersections.count} valid, unconnected intersections."
+
+    # 4. Insert Custom Via Stack PCell
+    ## TO FIX: get library_by_name('SG13_dev') is not working, 
+    ## but library_by_id(1) is working, need to check why
+    lib = RBA::Library.library_by_id(1)
+    raise "Library #{PCELL_LIB_NAME} not found" if lib.nil?
+
+    ## layout start changes and transaction to ensure the undo/redo operations works correctly.
+    layout.start_changes
+    mw.manager.transaction("Auto Insert Via Stacks")
+    ## Put all the generated vias in a one cell.
+    vias_cell_name = "auto_vias_#{label_name}" # Dynamically names it, e.g., "auto_vias_VDD"
+    
+    ## select or create the vias parent cell
+    if layout.has_cell?(vias_cell_name)
+      vias_cell = layout.cell(vias_cell_name)
+    else
+      vias_cell = layout.create_cell(vias_cell_name)
+      # Instantiate the new vias cell into your active top cell at origin (0,0)
+      cell.insert(RBA::CellInstArray.new(vias_cell.cell_index, RBA::Trans.new))
+    end
+    #cell.shapes(layer_m3).insert(obstacles)
+
+    ## That will help us track the placed vias, and make sure we do not place vias too close to each other
+    placed_vias_tracker = RBA::Region.new
+    ## start planting vias
+    ## We used the same routing to plant TV1/V3 vias between MT1 - MT4/TM1, so
+    ## It's better to use a loop to place the vias between the TM1 region and M4 region
+    [unconnected_intersections, m4_unconnected_intersections].each_with_index do |intersections, index|
+      # --- NEW: Create a region containing all pieces of this net ---
+      all_arms = m1_reg
+      #intersections.each { |p| all_arms.insert(p) }
+      
+      # Define your safety margin: DRC Spacing Rule + Via Overhang
+      # (e.g., 0.13um spacing + 0.04um overhang = 0.17um)
+      # Adjust this value until the DRC errors disappear.
+      corner_margin_um = 0.24 ## arbitrary value
+      corner_margin_dbu = (corner_margin_um / dbu).to_i
+      intersections.each do |poly|
+        current_poly_reg = RBA::Region.new(poly)
+        ## skip The already connected polygons to avoid placing vias too close to the existing one
+        ## a U shape will have only one via stack in one of it's arms
+        ## but running the script three times will place the vias on all of the other arms
+        ## so i can make a loop to run the same routine three times
+        ## or just make the use decide
+        if current_poly_reg.interacting(placed_vias_tracker).area &gt; 0 &amp;&amp; placed_vias_tracker.count &gt; 0
+          puts "Skipping a piece due to keepout interaction with an already placed via. #{placed_vias_tracker.count}, and #{current_poly_reg.interacting(placed_vias_tracker)}"
+          next 
+        end
+
+        # --- NEW: Self-Spacing Logic ---
+        # 1. Identify the "other" arms of the U/L shape
+        other_arms = all_arms - current_poly_reg
+        
+        # 2. Expand those other arms outward by the safety margin
+        keepout_from_others = other_arms.sized(corner_margin_dbu)
+        
+        # 3. Trim our current placement piece to stay far away from the other arms
+        safe_placement_reg = current_poly_reg - keepout_from_others
+        
+        # If the arm is too small and completely swallowed by the keepout, skip it!
+        next if safe_placement_reg.is_empty?
+        
+        # 4. Extract the Bounding Box from the SAFE region, not the raw poly!
+        bbox = safe_placement_reg.bbox
+
+        #bbox = poly.bbox
+        
+        
+        # Convert dimensions from Database Units (DBU) to Microns for the PCell
+        offset = index == 0? 0.7 : 0.5 ## ajustable safe size between index == 0: V1-TV1 stack, index == 1: V1-V3 stack
+        offset = 0
+        width_um = self.fix_grid(bbox.width * dbu - offset, 0.005) ## fixing the grid (um unit)
+        height_um = self.fix_grid(bbox.height * dbu - offset, 0.005) ## fixing the grid (um unit)
+        center_x =  self.fix_grid(bbox.center.x, 5) ## fixing the grid (klayout unit)
+        center_y = self.fix_grid(bbox.center.y, 5) ## fixing the grid (klayout unit)
+        
+        
+        next if width_um &lt; 0 || height_um &lt; 0 ## skip, there is not enough space for the via
+        ## TO REVIEW
+        next if width_um &lt; 0.7 &amp;&amp; height_um &lt; 0.7 # Skip tiny pieces that can't fit 2 vias
+        
+        ## USED FOR DEBUG
+        ## TO REMOVE LATER
+        if width_um &lt;= 0
+          width_um = 0.5 # Minimum width to avoid zero or negative dimensions
+        end
+        if height_um &lt;= 0
+          height_um = 0.5 # Minimum height to avoid zero or negative dimensions
+        end
+        
+        ## PROCESSING PCELL PARAMS
+        width_str = width_um.to_s + "u"
+        height_str = height_um.to_s+"u"
+        
+        #puts width_str
+        
+        #puts height_str
+
+        # Define parameters expected by YOUR modified PCell.
+        # You must align these keys to the actual parameter names in your PCell script.
+        pcell_params = {
+          "b_layer" =&gt; self.encode_pcell_string("Metal1"), 
+          "t_layer"    =&gt; self.encode_pcell_string(index == 0 ? "TopMetal1" : "Metal4"),
+          "use_array_size" =&gt;  self.encode_pcell_string("yes"),
+          "vn_total_width"    =&gt; self.encode_pcell_string(width_str),
+          "vn_total_height"   =&gt; self.encode_pcell_string(height_str)
+        }
+        
+        ## Get pcell from library
+        via_id = lib.layout.pcell_id(PCELL_NAME)
+
+        # Generate the PCell variant inside the layout
+        pcell_idx = layout.add_pcell_variant(lib, via_id, pcell_params)
+
+        # Insert the instance at the center of the intersection bounding box
+        trans = RBA::Trans.new(center_x, center_y)
+        vias_cell.insert(RBA::CellInstArray.new(pcell_idx, trans))
+        
+        keepout_margin = (0.5 / dbu).to_i # 0.5um spacing. to avoid the next via to be close to this via to avoid DRC errors
+        keepout_box = bbox.enlarged(keepout_margin, keepout_margin)
+        
+        placed_vias_tracker.insert(keepout_box)
+        placed_vias_tracker.merge
+      end
+    end
+
+    mw.manager.commit
+    layout.end_changes
+    
+    # Trigger a redraw to show the newly inserted PCells
+    lv.add_missing_layers
+    lv.update_content
+    puts "Via stack insertion complete."
+  end
+  
+  def self.get_all_tm1_labels(cell, layout)
+    ## The script always starts from the labled TM1 then starts process
+    ## this routine is to collect all the labled TM1, and make the user select witch one to process
+    labels = []
+    tm1_layer_infos = layout.layer_infos.select { |li| li.layer == 126 }
+
+    tm1_layer_infos.each do |li|
+      layer_idx = layout.layer(li)
+      iter = cell.begin_shapes_rec(layer_idx)
+      while !iter.at_end?
+        if iter.shape.is_text?
+          labels &lt;&lt; iter.shape.text.string
+        end
+        iter.next
+      end
+    end
+    
+    # Return an array of unique labels, sorted alphabetically
+    labels.uniq.sort
+  end
+
+  def self.main
+    ## main function
+    app = RBA::Application.instance
+    mw = app.main_window
+    lv = mw.current_view
+    raise "No active layout view" if lv.nil?
+
+    layout = lv.active_cellview.layout
+    cell = lv.active_cellview.cell
+
+    # 1. Gather all unique TM1 labels
+    available_labels = get_all_tm1_labels(cell, layout)
+
+    # 2. Check if there are any labels at all
+    if available_labels.empty?
+      RBA::QMessageBox.warning(mw, "No Labels Found", "No text labels were found on the TopMetal1 layer (126).")
+      return
+    end
+
+    # 3. Create the Qt Dialog Window
+    dialog = RBA::QDialog.new(mw)
+    dialog.windowTitle = "Auto Via Inserter"
+    dialog.resize(300, 120)
+
+    # 4. Set up the UI layout
+    main_layout = RBA::QVBoxLayout.new(dialog)
+
+    # Add a descriptive label
+    info_label = RBA::QLabel.new("Select the target label for TopMetal1:", dialog)
+    main_layout.addWidget(info_label)
+
+    # Add the Dropdown (ComboBox)
+    combo_box = RBA::QComboBox.new(dialog)
+    combo_box.addItems(available_labels)
+    main_layout.addWidget(combo_box)
+
+    # Add OK / Cancel Buttons
+    button_box = RBA::QDialogButtonBox.new(dialog)
+    button_box.setStandardButtons(RBA::QDialogButtonBox::Ok | RBA::QDialogButtonBox::Cancel)
+    main_layout.addWidget(button_box)
+
+    # Connect buttons to dialog actions
+    button_box.accepted { dialog.accept }
+    button_box.rejected { dialog.reject }
+
+    # 5. Show the dialog and wait for user response
+    if dialog.exec == 1 # 1 means the user clicked OK
+      selected_label = combo_box.currentText
+      # Run the heavy processing with the selected text
+      run_insertion(selected_label)
+    else
+      puts "Via insertion canceled by user."
+    end
+  end
+
+end
+
+# Run the script
+ViaAutoInserter.main
+
+layout_view = RBA::Application.instance.main_window.current_view
+layout_view.add_missing_layers
+layout_view.update_content</text>
+</klayout-macro>
