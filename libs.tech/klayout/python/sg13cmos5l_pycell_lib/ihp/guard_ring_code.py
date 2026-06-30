@@ -1,1 +1,0 @@
-../../../../../../ihp-sg13g2/libs.tech/klayout/python/sg13g2_pycell_lib/ihp/guard_ring_code.py
