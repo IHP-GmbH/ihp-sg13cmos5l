@@ -39,7 +39,8 @@ class via_stack(DloGen):
 #endif
 
         # SG13CMOS5L: M1-M4-TM1 stack (Metal5 removed, TopMetal1 as top layer)
-        specs('b_layer', 'Metal1', 'Bottom layer', ChoiceConstraint(['Metal1', 'Metal2', 'Metal3', 'Metal4', 'TopMetal1']))
+        # Activ / GatPoly may be chosen as bottom layer to contact device active area / poly via Cont.
+        specs('b_layer', 'Metal1', 'Bottom layer', ChoiceConstraint(['Activ', 'GatPoly', 'Metal1', 'Metal2', 'Metal3', 'Metal4', 'TopMetal1']))
         specs('t_layer', 'Metal2', 'Top layer', ChoiceConstraint(['Metal1', 'Metal2', 'Metal3', 'Metal4', 'TopMetal1']))
         specs('vn_columns', 2, 'Via_n Columns')
         specs('vn_rows', 2, 'Via_n Rows')
@@ -101,7 +102,55 @@ class via_stack(DloGen):
         # SG13CMOS5L: M1-M4-TM1 metal stack (TopVia1 connects M4 to TopMetal1)
         metal_layers = ['Metal1', 'Metal2', 'Metal3', 'Metal4', 'TopMetal1']
         via_layers = ['Via1', 'Via2', 'Via3', 'TopVia1']
-        
+
+        # Activ and GatPoly are mutually exclusive device layers that connect to
+        # Metal1 through the Cont layer. They may only be the bottom of the stack.
+        device_layers = ['Activ', 'GatPoly']
+
+        #*************************************************************************
+        #*
+        #* Activ / GatPoly contact (Cont) to Metal1
+        #*
+        #************************************************************************
+
+        dev_bottom = None
+        if b_layer in device_layers:
+            dev_bottom = b_layer
+        elif t_layer in device_layers:
+            dev_bottom = t_layer
+            t_layer = b_layer  # device layer is always the bottom; the metal becomes the stack top
+
+        if dev_bottom is not None:
+            if t_layer in device_layers:
+                # both ends selected as device layers: only draw the Activ/GatPoly -> Metal1 contact
+                t_layer = 'Metal1'
+
+            columns = vn_columns
+            rows = vn_rows
+            cnt_size = self.techparams['Cnt_a']
+            cnt_sep = self.techparams['Cnt_b1'] \
+                if (columns > self.techparams['Cnt_b1_nr'] and rows > self.techparams['Cnt_b1_nr']) \
+                else self.techparams['Cnt_b']
+            dev_enc = self.techparams['Cnt_c']   # Activ/GatPoly enclosure of Cont
+            m1_enc = self.techparams['M1_c1']    # Metal1 enclosure of Cont
+
+            w_x = (columns * cnt_size + (columns - 1) * cnt_sep)
+            w_y = (rows * cnt_size + (rows - 1) * cnt_sep)
+
+            # device layer (Activ or GatPoly) landing rectangle
+            dbCreateRect(self, dev_bottom, Box(-dev_enc-w_x/2, -dev_enc-w_y/2, w_x/2 + dev_enc, w_y/2 + dev_enc))
+            # Metal1 landing rectangle over the contacts
+            dbCreateRect(self, 'Metal1', Box(-m1_enc-w_x/2, -m1_enc-w_y/2, w_x/2 + m1_enc, w_y/2 + m1_enc))
+            # Cont array
+            for i in range(columns):
+                x0 = i * cnt_sep + i * cnt_size - w_x/2
+                for j in range(rows):
+                    y0 = j * cnt_sep + j * cnt_size - w_y/2
+                    dbCreateRect(self, 'Cont', Box(x0, y0, x0 + cnt_size, y0 + cnt_size))
+
+            # continue the metal stack from Metal1 upward
+            b_layer = 'Metal1'
+
         #*************************************************************************
         #*
         #* Main body of code
