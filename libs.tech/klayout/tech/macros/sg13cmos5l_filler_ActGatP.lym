@@ -19,7 +19,7 @@
    # Automatic filler generation script for Active/GatPoly
    # SG13CMOS5L PDK: CMOS-only, M1-M4-TM1 metal stack
    
-  for mode in 0..1
+  mode = 0
   # Active layers
     Activ = source.input("1/0") | source.input("1/22") # include the active:filler with the active layer
     Activ_filler = source.input("1/22")
@@ -219,6 +219,5 @@
     fill_area = cellframe1-exclLayAct-exclLayGatP
     fill_area.fill(act_fill, hstep(spacing_h, offset_v), vstep(offset_h, spacing_v))
     fill_area.fill(gp_fill, hstep(gp_spacing_h, gp_offset_v), vstep(gp_offset_h, gp_spacing_v))
-  end
 </text>
 </klayout-macro>
