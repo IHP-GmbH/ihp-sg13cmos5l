@@ -219,6 +219,12 @@ end
 
 # %include rule_decks/custom_classes.lvs
 
+#================================================
+# ---------- CAP_MOM CUSTOM EXTRACTOR -----------
+#================================================
+
+# %include rule_decks/cap_mom_extractor.lvs
+
 # Instantiate a reader using the new delegate
 reader = RBA::NetlistSpiceReader.new(CustomReader.new)
 
@@ -342,6 +348,12 @@ else
 
   # %include rule_decks/cap_derivations.lvs
 
+  #==================================
+  # ------ CAP_MOM DERIVATIONS ------
+  #==================================
+
+  # %include rule_decks/cap_mom_derivations.lvs
+
   #================================
   # ------ ESD DERIVATIONS --------
   #================================
@@ -365,6 +377,12 @@ else
   #================================================
 
   # %include rule_decks/devices_connections.lvs
+
+  #==================================
+  # ------ CAP_MOM CONNECTIONS ------
+  #==================================
+
+  # %include rule_decks/cap_mom_connections.lvs
 
   #================================================
   #------------- DEVICES EXTRACTION ---------------
@@ -411,6 +429,12 @@ else
   #==================================
 
   # %include rule_decks/cap_extraction.lvs
+
+  #==================================
+  # ------- CAP_MOM EXTRACTION ------
+  #==================================
+
+  # %include rule_decks/cap_mom_extraction.lvs
 
   #================================
   # ------- ESD EXTRACTION --------
