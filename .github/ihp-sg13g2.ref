@@ -1,0 +1,16 @@
+# Commit of IHP-GmbH/IHP-Open-PDK that CI pairs this PDK with.
+#
+# Most of this PDK is symlinked into a sibling ihp-sg13g2 checkout, so CI needs
+# one to exist. Pinning it means a change on the G2 side cannot break this repo
+# without someone bumping this file, which is a reviewable step rather than a
+# surprise on an unrelated pull request.
+#
+# This is the newest G2 commit this PDK currently works against. The next one
+# adds the cap_mom rule decks and includes them from decks we symlink, so the
+# whole LVS deck stops loading until we have symlinks for them. That is PR #61.
+# check_includes.py reports exactly that, so bumping this pin without the
+# matching symlinks fails loudly instead of mid-run.
+#
+# To adopt newer G2 work: put the new commit here and make sure the regressions
+# still pass. If G2 added rule decks, they need symlinks on this side too.
+7eed9334d3bc9a4bdb2fcaa39fa3063226cd78ed
