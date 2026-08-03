@@ -88,6 +88,17 @@ test-LVS-switch: env
 	@. $(VENV_RUN_COMMAND); echo "Running Klayout-LVS switch test"
 	@. $(VENV_RUN_COMMAND); cd $(KLAYOUT_LVS_TESTS) && make test-LVS-switch
 
+#=================================
+# -------- test-qucs-s -----------
+#=================================
+
+# Static check that every Qucs-S component resolves to a real device on this
+# PDK's ngspice sourcepath. Needs no simulator.
+.ONESHELL:
+test-qucs-s: env
+	@. $(VENV_RUN_COMMAND); echo "Checking Qucs-S device coverage for SG13CMOS5L"
+	@. $(VENV_RUN_COMMAND); python3 libs.tech/qucs-s/check_device_coverage.py
+
 #==========================
 # --------- HELP ----------
 #==========================
@@ -102,5 +113,6 @@ help:
 	@echo "... test-LVS-<device>          (Run LVS for specific device group             )"
 	@echo "... test-LVS-cells             (Run LVS for all standard cells                )"
 	@echo "... test-LVS-switch            (Run simple LVS switching test                 )"
+	@echo "... test-qucs-s                (Check Qucs-S device coverage                  )"
 
-.PHONY: env lint lint_python test-DRC-main test-LVS-main test-LVS-cells test-LVS-switch help
+.PHONY: env lint lint_python test-DRC-main test-LVS-main test-LVS-cells test-LVS-switch test-qucs-s help

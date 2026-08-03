@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<Component
+  xsi:noNamespaceSchemaLocation="Component.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  library="IHP SG13CMOS5L devices" names="bondpad" schematic_id = "X">
+    <Description>
+     SG13CMOS5L bondpad
+    </Description>
+    <Models>
+        <DefaultModel value="bondpad">
+        </DefaultModel>
+        <SpiceModel value="bondpad">
+        </SpiceModel>
+    </Models>
+    <Netlists>
+        <NgspiceNetlist value = 'XR{PartCounter} {nets} bondpad '>
+        </NgspiceNetlist>
+        <CDLNetlist value = 'X{PartCounter} {nets} bondpad '> </CDLNetlist>
+        <XyceNetlist value = 'XR{PartCounter} {nets} bondpad '>
+        </XyceNetlist>
+    </Netlists>
+    <Symbols>
+        <Symbol id="Standard">
+           <File>{QUCS_S_COMPONENTS_LIBRARY}/pad.sym</File>
+        </Symbol>
+    </Symbols>
+    <Parameters>
+    </Parameters>
+</Component>
