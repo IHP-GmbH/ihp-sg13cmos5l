@@ -88,6 +88,24 @@ test-LVS-switch: env
 	@. $(VENV_RUN_COMMAND); echo "Running Klayout-LVS switch test"
 	@. $(VENV_RUN_COMMAND); cd $(KLAYOUT_LVS_TESTS) && make test-LVS-switch
 
+#=================================
+# --------- test-gnucap ----------
+#=================================
+
+# Cross-validates the Verilog-A device models against Ngspice.
+# Skips rather than fails when the toolchain is absent, so that contributors
+# working on DRC/LVS are not blocked by a missing simulator.
+.ONESHELL:
+test-gnucap:
+	@if ! command -v gnucap >/dev/null 2>&1; then \
+	  echo "Skipping: gnucap not installed (see libs.tech/gnucap/README.md)"; \
+	elif [ -z "$$PDK_ROOT" ]; then \
+	  echo "Skipping: PDK_ROOT is not set (see libs.tech/gnucap/README.md)"; \
+	else \
+	  echo "Running Gnucap regression for SG13CMOS5L devices"; \
+	  PDK=ihp-sg13cmos5l $(MAKE) -C libs.tech/gnucap check; \
+	fi
+
 #==========================
 # --------- HELP ----------
 #==========================
@@ -102,5 +120,6 @@ help:
 	@echo "... test-LVS-<device>          (Run LVS for specific device group             )"
 	@echo "... test-LVS-cells             (Run LVS for all standard cells                )"
 	@echo "... test-LVS-switch            (Run simple LVS switching test                 )"
+	@echo "... test-gnucap                (Run Gnucap/Ngspice device model regression    )"
 
-.PHONY: env lint lint_python test-DRC-main test-LVS-main test-LVS-cells test-LVS-switch help
+.PHONY: env lint lint_python test-DRC-main test-LVS-main test-LVS-cells test-LVS-switch test-gnucap help
