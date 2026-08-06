@@ -89,6 +89,14 @@ test-LVS-switch: env
 	@. $(VENV_RUN_COMMAND); cd $(KLAYOUT_LVS_TESTS) && make test-LVS-switch
 
 #=================================
+# ---- test-cap-cmomi-sweep ------
+#=================================
+
+test-cap-cmomi-sweep: env
+	@. $(VENV_RUN_COMMAND); echo "Running cap_cmomi PCell DRC+LVS sweep"
+	@. $(VENV_RUN_COMMAND); python3 libs.tech/klayout/sg13cmos5l_tests/cap_cmomi_sweep.py
+
+#=================================
 # --------- test-gnucap ----------
 #=================================
 
@@ -143,6 +151,7 @@ help:
 	@echo "... test-LVS-<device>          (Run LVS for specific device group             )"
 	@echo "... test-LVS-cells             (Run LVS for all standard cells                )"
 	@echo "... test-LVS-switch            (Run simple LVS switching test                 )"
+	@echo "... test-cap-cmomi-sweep       (Run cap_cmomi PCell DRC+LVS configuration sweep)"
 	@echo "... test-gnucap                (Build model plugins, run the device regression)"
 
-.PHONY: env lint lint_python test-DRC-main test-LVS-main test-LVS-cells test-LVS-switch test-gnucap help
+.PHONY: env lint lint_python test-DRC-main test-LVS-main test-LVS-cells test-LVS-switch test-cap-cmomi-sweep test-gnucap help
