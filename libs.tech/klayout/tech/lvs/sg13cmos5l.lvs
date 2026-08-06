@@ -341,6 +341,7 @@ else
   #==================================
 
   # %include rule_decks/cap_derivations.lvs
+  # %include rule_decks/cap_svaricap_cmos5l.lvs
 
   #================================
   # ------ ESD DERIVATIONS --------
