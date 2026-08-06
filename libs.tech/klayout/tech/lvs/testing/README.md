@@ -11,6 +11,7 @@ This directory contains the LVS regression testing infrastructure for the SG13CM
 | RES | Resistors (poly, silicide, metal M1-M4, TM1) | Supported |
 | ESD | ESD protection devices (diodevdd/vss only) | Supported |
 | TAP | Substrate/well taps | Supported |
+| CAP | MoM capacitor (cap_cmomi, Metal1-Metal4) | Supported (approximate model, pending silicon) |
 | IND | Custom inductors (inductor2, inductor3) | Supported |
 
 Inductors are recognised, not generated: CMOS5L ships no inductor PCell, so
@@ -27,8 +28,10 @@ general text layer (63/0) inside the `IND` box, or nothing is extracted.
 ## Excluded Device Groups (Not in CMOS5L)
 
 - **RFMOS**: RF MOSFET devices
-- **CAP**: S-Varicap requires nBuLay (forbidden in CMOS5L)
-- **MIM**: MIM capacitors (cap_cmim, rfcmim)
+- **CAP (S-Varicap only)**: `sg13_hv_svaricap` requires nwell_iso (forbidden); the
+  MoM `cap_cmomi` in the CAP group IS supported (see the table above). The MOS
+  varactors `sg13_moscap_n/p` are excluded for now (no CMOS5L testcase yet).
+- **MIM**: MIM capacitors (cap_cmim, rfcmim) require the forbidden MIM layer
 - **Schottky**: Schottky diodes (require nBuLay)
 
 ## Excluded Devices (nBuLay dependency)

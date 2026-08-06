@@ -55,10 +55,10 @@ proc sg13cmos5l::cap_recalc {field parameters} {
     set mminidx [lsearch $metallist $mmin]
     set mmaxidx [lsearch $metallist $mmax]
 
-    set areacap 0.55
-    if {$mminidx == 0} {set areacap 0.67}
+    set areacap 0.305
+    if {$mminidx == 0} {set areacap 0.372}
     for {set i [expr {$mminidx + 1}]} {$i <= $mmaxidx} {incr i} {
-	set areacap [expr {$areacap + 0.55}]
+	set areacap [expr {$areacap + 0.305}]
     }
 
     switch  $field {
@@ -675,8 +675,11 @@ proc sg13cmos5l::cap_draw_interdigitated {parameters} {
     close $f
 
     # Value of the device in the .ext file should be in fF, as opposed to
-    # the parasitic value in aF, so convert from aF to fF.
-    set value [* $capvalaF 1.0e-3]
+    # the parasitic value in aF, so convert from aF to fF.  Note also that
+    # the MoM cap geometry makes the actual value about 11% higher than
+    # computed from wire parasitics, so this is added in.  This 11% includes
+    # corner effects, so corner computations are not enabled in this extraction.
+    set value [* $capvalaF 1.11e-3]
    
     # The extraction file is no longer needed
     file delete ${cname}.ext
