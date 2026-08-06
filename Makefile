@@ -96,6 +96,14 @@ test-cap-cmomi-sweep: env
 	@. $(VENV_RUN_COMMAND); echo "Running cap_cmomi PCell DRC+LVS sweep"
 	@. $(VENV_RUN_COMMAND); python3 libs.tech/klayout/sg13cmos5l_tests/cap_cmomi_sweep.py
 
+#=================================
+# ---- test-cap-cmomf-sweep ------
+#=================================
+
+test-cap-cmomf-sweep: env
+	@. $(VENV_RUN_COMMAND); echo "Running cap_cmomf PCell DRC+LVS sweep"
+	@. $(VENV_RUN_COMMAND); python3 libs.tech/klayout/sg13cmos5l_tests/cap_cmomf_sweep.py
+
 #==========================
 # --------- HELP ----------
 #==========================
@@ -111,5 +119,6 @@ help:
 	@echo "... test-LVS-cells             (Run LVS for all standard cells                )"
 	@echo "... test-LVS-switch            (Run simple LVS switching test                 )"
 	@echo "... test-cap-cmomi-sweep       (Run cap_cmomi PCell DRC+LVS configuration sweep)"
+	@echo "... test-cap-cmomf-sweep       (Run cap_cmomf PCell DRC+LVS configuration sweep)"
 
-.PHONY: env lint lint_python test-DRC-main test-LVS-main test-LVS-cells test-LVS-switch test-cap-cmomi-sweep help
+.PHONY: env lint lint_python test-DRC-main test-LVS-main test-LVS-cells test-LVS-switch test-cap-cmomi-sweep test-cap-cmomf-sweep help

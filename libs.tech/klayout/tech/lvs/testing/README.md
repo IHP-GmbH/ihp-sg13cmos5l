@@ -12,6 +12,15 @@ This directory contains the LVS regression testing infrastructure for the SG13CM
 | ESD | ESD protection devices (diodevdd/vss only) | Supported |
 | TAP | Substrate/well taps | Supported |
 | CAP | MoM capacitor (cap_cmomi, Metal1-Metal4) | Supported (approximate model, pending silicon) |
+| CAP_CMOMF | MoM fringe capacitor (cap_cmomf, Metal1-Metal4) | Supported (approximate model, pending silicon) |
+
+`cap_cmomf` sits in its own group rather than in CAP because it is registered
+from a cmos5l-local `cap_cmomf_extraction.lvs`: this runner derives the group
+from the extraction deck's filename and matches it against the testcase
+directory, and the shared `cap_extraction.lvs` where the device belongs is a
+symlink into the sibling ihp-sg13g2. The two merge once cap_cmomf is
+upstreamed. The device is recognised by its own marker, `Recog.momf` (99/40),
+because `cap_cmomi` owns `Recog.mom` (99/39) by design in the shared deck.
 
 ## Excluded Device Groups (Not in CMOS5L)
 
