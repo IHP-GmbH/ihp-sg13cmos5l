@@ -32,7 +32,6 @@ proc sg13cmos5l::bondpad_convert {parameters} {
                 set value [magic::spice2float $value]
                 set value [expr $value * 1e6]
                 set value [magic::3digitpastdecimal $value]
-
 		dict set pdkparams width $value
 		dict set pdkparams height $value
 	    }

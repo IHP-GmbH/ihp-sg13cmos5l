@@ -25,6 +25,8 @@ from cni.dlo import PCellWrapper
 
 # Creates the SG13_dev technology
 from .sg13_tech import *
+from .sg13_tech_info import *
+from .native_pcells.via_pcell import ViaPCell
 
 from pypreprocessor.pypreprocessor import preprocessor as preProcessor
 
@@ -66,6 +68,7 @@ moduleNames = [
         'rfpmosHV_code',       # Symlink - RF PMOS HV
         'NoFillerStack_code',  # Modified - No filler utility (M1-M4-TM1)
         'pnpMPA_code',         # Symlink - Parasitic PNP (tbd.3 - enabled for discussion)
+        'cap_cmomi_code',      # MoM capacitor (M1-M4 thin-metal stack)
 ]
 
 def getProcessNames():
@@ -154,8 +157,8 @@ if the environment variable 'IHP_PYCELL_LIB_PRINT_DEFINES_SET' is set.
 class PyCellLib(pya.Library):
     def __init__(self):
         self.description = "IHP SG13CMOS5L Pcells"
-        self.technology = 'sg13cmos5l'
-        
+        self.technology = SG13_Tech.TECH_NAME
+
         tech = Tech.get('SG13_dev')
 
         processNames = []
@@ -247,6 +250,15 @@ class PyCellLib(pya.Library):
 
         self.register("SG13_dev")
 
-# instantiate and register the library
-PyCellLib()
 
+class SG13G2_NativePCellLib(pya.Library):
+    def __init__(self):
+        self.description = "SG13G2 Native PCells"
+        self.technology = SG13_Tech.TECH_NAME
+        self.layout().register_pcell("Via", ViaPCell())
+        self.register("SG13_native_pcell_lib")
+
+
+# instantiate and register the libraries
+PyCellLib()
+SG13G2_NativePCellLib()

@@ -33,7 +33,7 @@
 # square capacitor.
 #----------------------------------------------------------------
 
-proc sg13cmos5l::capacitor_defaults {} {
+proc sg13cmos5l::cap_cmomf_defaults {} {
     return {w 2.00 l 2.00 value 9.28 class capacitor \
 		mmin metal1 mmax metal4 square 1 subblock 0 \
 		lmin 2.00 wmin 2.00 lmax 100.0 wmax 100.0}
@@ -55,10 +55,10 @@ proc sg13cmos5l::cap_recalc {field parameters} {
     set mminidx [lsearch $metallist $mmin]
     set mmaxidx [lsearch $metallist $mmax]
 
-    set areacap 0.55
-    if {$mminidx == 0} {set areacap 0.67}
+    set areacap 0.305
+    if {$mminidx == 0} {set areacap 0.372}
     for {set i [expr {$mminidx + 1}]} {$i <= $mmaxidx} {incr i} {
-	set areacap [expr {$areacap + 0.55}]
+	set areacap [expr {$areacap + 0.305}]
     }
 
     switch  $field {
@@ -134,7 +134,7 @@ proc sg13cmos5l::cap_convert {parameters} {
 		set dvalue [* $dvalue 1e15]
 		dict set pdkparams [string tolower $key] $dvalue
 		# Convert value back to W and L.
-		set pdkparams [dict merge [sg13cmos5l::capacitor_defaults] $pdkparams]
+		set pdkparams [dict merge [sg13cmos5l::cap_cmomf_defaults] $pdkparams]
 		set pdkparams [sg13cmos5l::cap_recalc value $pdkparams]
 	    }
 	    default {
@@ -146,7 +146,7 @@ proc sg13cmos5l::cap_convert {parameters} {
     return $pdkparams
 }
 
-proc sg13cmos5l::capacitor_convert {parameters} {
+proc sg13cmos5l::cap_cmomf_convert {parameters} {
     return [cap_convert $parameters]
 }
 
@@ -177,8 +177,8 @@ proc sg13cmos5l::cap_dialog {device parameters} {
     magic::add_dependency sg13cmos5l::cap_recalc $device sg13cmos5l l w mmin mmax value
 }
 
-proc sg13cmos5l::capacitor_dialog {parameters} {
-    sg13cmos5l::cap_dialog capacitor $parameters
+proc sg13cmos5l::cap_cmomf_dialog {parameters} {
+    sg13cmos5l::cap_dialog cap_cmomf $parameters
 }
 
 #----------------------------------------------------------------
@@ -256,8 +256,8 @@ proc sg13cmos5l::cap_check {devname parameters} {
     return $parameters
 }
 
-proc sg13cmos5l::capacitor_check {parameters} {
-    return [sg13cmos5l::cap_check capacitor $parameters]
+proc sg13cmos5l::cap_cmomf_check {parameters} {
+    return [sg13cmos5l::cap_check cap_cmomf $parameters]
 }
 
 #---------------------------------------------------------
@@ -675,8 +675,11 @@ proc sg13cmos5l::cap_draw_interdigitated {parameters} {
     close $f
 
     # Value of the device in the .ext file should be in fF, as opposed to
-    # the parasitic value in aF, so convert from aF to fF.
-    set value [* $capvalaF 1.0e-3]
+    # the parasitic value in aF, so convert from aF to fF.  Note also that
+    # the MoM cap geometry makes the actual value about 11% higher than
+    # computed from wire parasitics, so this is added in.  This 11% includes
+    # corner effects, so corner computations are not enabled in this extraction.
+    set value [* $capvalaF 1.11e-3]
    
     # The extraction file is no longer needed
     file delete ${cname}.ext
@@ -697,7 +700,7 @@ proc sg13cmos5l::cap_draw_interdigitated {parameters} {
 
 #----------------------------------------------------------------
 
-proc sg13cmos5l::capacitor_draw {parameters} {
+proc sg13cmos5l::cap_cmomf_draw {parameters} {
     set drawdict [dict merge $sg13cmos5l::ruleset $parameters]
     return [sg13cmos5l::cap_draw_interdigitated $drawdict]
 }
