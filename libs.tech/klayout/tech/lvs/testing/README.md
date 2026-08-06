@@ -13,6 +13,7 @@ This directory contains the LVS regression testing infrastructure for the SG13CM
 | TAP | Substrate/well taps | Supported |
 | CAP | MoM capacitor (cap_cmomi, Metal1-Metal4) | Supported (approximate model, pending silicon) |
 | CAP_CMOMF | MoM fringe capacitor (cap_cmomf, Metal1-Metal4) | Supported (approximate model, pending silicon) |
+| IND | Custom inductors (inductor2, inductor3) | Supported |
 
 `cap_cmomf` sits in its own group rather than in CAP because it is registered
 from a cmos5l-local `cap_cmomf_extraction.lvs`: this runner derives the group
@@ -22,15 +23,24 @@ symlink into the sibling ihp-sg13g2. The two merge once cap_cmomf is
 upstreamed. The device is recognised by its own marker, `Recog.momf` (99/40),
 because `cap_cmomi` owns `Recog.mom` (99/39) by design in the shared deck.
 
+Inductors are recognised, not generated: CMOS5L ships no inductor PCell, so
+a coil is drawn by hand and marked up per section 6.6 of
+`SG13CMOS5L_os_layout_rules.pdf`. The winding goes on TopMetal1 and the
+underpass crossings on Metal4/Metal3, which is one level below the SG13G2
+TopMetal2/TopMetal1 pair. `sg13cmos5l.lvs` says so via `ind_wind`/`ind_cross`;
+the rule decks themselves stay shared with G2.
+
+Besides the `IND`, `IND:pin` and `IND:text` markup the section describes, the
+device also needs a text label matching `inductor2*` or `inductor3*` on the
+general text layer (63/0) inside the `IND` box, or nothing is extracted.
+
 ## Excluded Device Groups (Not in CMOS5L)
 
 - **RFMOS**: RF MOSFET devices
-- **BJT**: HBT bipolar transistors (npn13G2, npn13G2L, npn13G2V)
 - **CAP (S-Varicap only)**: `sg13_hv_svaricap` requires nwell_iso (forbidden); the
   MoM `cap_cmomi` in the CAP group IS supported (see the table above). The MOS
   varactors `sg13_moscap_n/p` are excluded for now (no CMOS5L testcase yet).
 - **MIM**: MIM capacitors (cap_cmim, rfcmim) require the forbidden MIM layer
-- **IND**: Inductors (inductor2, inductor3)
 - **Schottky**: Schottky diodes (require nBuLay)
 
 ## Excluded Devices (nBuLay dependency)
