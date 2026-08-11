@@ -28,6 +28,9 @@
 # KLAYOUT_PATH=$(pwd)/.. klayout ihp-pycells.gds -e
 
 layout = pya.Layout()
+# The SG13_dev library is bound to the sg13cmos5l technology; the layout must
+# use the same technology for the library lookup to succeed (KLayout >= 0.28)
+layout.technology_name = "sg13cmos5l"
 
 # Basic MOSFET devices
 pcellNmos = layout.create_cell("nmos", "SG13_dev", { "l": 0.350e-6, "w": 6e-6, "ng": 3 })
@@ -82,6 +85,15 @@ pcellSealring = layout.create_cell("sealring", "SG13_dev", {})
 pcellCapMom = layout.create_cell("cap_cmomi", "SG13_dev", {"feed": "double"})
 pcellCapMomSame = layout.create_cell("cap_cmomi", "SG13_dev", {"feed": "same"})
 
+# Guard rings (standalone cell, both types)
+pcellGuardRingNwell = layout.create_cell("guard_ring", "SG13_dev", {"type": "nwell"})
+pcellGuardRingPsub = layout.create_cell("guard_ring", "SG13_dev", {"type": "psub"})
+
+# Devices with guard ring option enabled (via DeviceBase)
+pcellNmosGuarded = layout.create_cell("nmos", "SG13_dev", {"l": 0.350e-6, "w": 6e-6, "ng": 3, "guardRingType": "psub"})
+pcellPmosGuarded = layout.create_cell("pmos", "SG13_dev", {"l": 0.350e-6, "w": 6e-6, "ng": 3, "guardRingType": "nwell"})
+pcellSVaricapGuarded = layout.create_cell("SVaricap", "SG13_dev", {"guardRingType": "nwell"})
+
 # Create top cell and place instances
 top = layout.create_cell("TOP")
 
@@ -124,6 +136,13 @@ top.insert(pya.DCellInstArray(pcellPnpMPA, pya.DTrans(pya.DVector(40, 80))))
 # Row 9: MoM capacitors (opposite-side and single-side feed)
 top.insert(pya.DCellInstArray(pcellCapMom, pya.DTrans(pya.DVector(0, 95))))
 top.insert(pya.DCellInstArray(pcellCapMomSame, pya.DTrans(pya.DVector(10, 95))))
+
+# Row 10: Guard rings (standalone and device option)
+top.insert(pya.DCellInstArray(pcellGuardRingNwell, pya.DTrans(pya.DVector(0, 110))))
+top.insert(pya.DCellInstArray(pcellGuardRingPsub, pya.DTrans(pya.DVector(10, 110))))
+top.insert(pya.DCellInstArray(pcellNmosGuarded, pya.DTrans(pya.DVector(20, 110))))
+top.insert(pya.DCellInstArray(pcellPmosGuarded, pya.DTrans(pya.DVector(30, 110))))
+top.insert(pya.DCellInstArray(pcellSVaricapGuarded, pya.DTrans(pya.DVector(40, 110))))
 
 # Large structures
 top.insert(pya.DCellInstArray(pcellBondpad, pya.DTrans(pya.DVector(40, 0))))
