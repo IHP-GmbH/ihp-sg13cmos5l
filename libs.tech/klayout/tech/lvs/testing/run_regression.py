@@ -19,8 +19,9 @@
 
 SG13CMOS5L supports CMOS-only devices with M1-M4-TM1 metal stack.
 Supported: MOS, RES, DIODE, ESD (diodevdd/vss, nmoscl), TAP, BJT (pnpMPA),
-           IND (inductor2, TopMetal1 winding)
-Excluded: RFMOS, CAP, MIM capacitors
+           IND (inductor2, TopMetal1 winding), CAP (cap_cmomi, moscaps),
+           CAP_CMOMF (cap_cmomf)
+Excluded: RFMOS, MIM capacitors
 
 Note on nBuLay (32/0) - FORBIDDEN per Layout Rules Section 3.2:
   The following devices use nBuLay (via nwell_iso derivation) and are excluded:
@@ -422,7 +423,15 @@ def run_regression(lvs_dir, output_path, target_device_group, cpu_count):
     # S-Varicap (needs cap_derivations nwell_iso -> nwell_drw). The moscaps
     # (sg13_moscap_n/p) run: main carries their testcases and turning the group
     # on must not take that away.
-    allowed_device_groups = ["MOS", "DIODE", "RES", "ESD", "TAP", "BJT", "CAP", "IND"]
+    #
+    # CAP_CMOMF is its own group only because the device is registered from a
+    # cmos5l-local cap_cmomf_extraction.lvs: this runner derives the group from
+    # the deck filename and matches it against the testcase directory. The
+    # shared cap_extraction.lvs, where cap_cmomf belongs next to cap_cmomi, is
+    # a symlink into g2. The group folds back into CAP when cap_cmomf is
+    # upstreamed.
+    allowed_device_groups = ["MOS", "DIODE", "RES", "ESD", "TAP", "BJT", "CAP",
+                             "CAP_CMOMF", "IND"]
 
     # Devices excluded from CMOS5L - require forbidden layers per Section 3.2
     # Reference: SG13CMOS5L_os_layout_rules.pdf - nBuLay (32/0) is forbidden
@@ -580,7 +589,8 @@ if __name__ == "__main__":
         "--device",
         type=str,
         default=None,
-        help="Target device group (MOS, DIODE, RES, ESD, TAP).",
+        help="Target device group (MOS, DIODE, RES, ESD, TAP, BJT, CAP, "
+             "CAP_CMOMF).",
     )
     parser.add_argument(
         "--run_dir",
@@ -632,9 +642,11 @@ if __name__ == "__main__":
 
     # selected device - CMOS5L only supports these device groups
     # Excluded: RFMOS. CAP is enabled for cap_cmomi (other CAP-group devices
-    # are filtered by excluded_devices).
+    # are filtered by excluded_devices); CAP_CMOMF is the MoM fringe capacitor,
+    # see the note on allowed_device_groups above.
     # Keep in sync with allowed_device_groups in main().
-    allowed_devices = ["MOS", "DIODE", "RES", "ESD", "TAP", "BJT", "CAP", "IND"]
+    allowed_devices = ["MOS", "DIODE", "RES", "ESD", "TAP", "BJT", "CAP",
+                       "CAP_CMOMF", "IND"]
     target_device_group = args.device
 
     if target_device_group and (target_device_group not in allowed_devices):

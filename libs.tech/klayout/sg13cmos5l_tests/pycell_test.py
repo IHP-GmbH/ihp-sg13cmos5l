@@ -29,6 +29,11 @@
 
 layout = pya.Layout()
 
+# Without a technology the SG13_dev lookup cannot resolve, every create_cell
+# below returns nil and the first DCellInstArray raises an internal error that
+# reads like a broken PCell library. Setting it here is the whole fix.
+layout.technology_name = "sg13cmos5l"
+
 # Basic MOSFET devices
 pcellNmos = layout.create_cell("nmos", "SG13_dev", { "l": 0.350e-6, "w": 6e-6, "ng": 3 })
 pcellPmos = layout.create_cell("pmos", "SG13_dev", { "l": 0.350e-6, "w": 6e-6, "ng": 3 })
@@ -82,6 +87,10 @@ pcellSealring = layout.create_cell("sealring", "SG13_dev", {})
 pcellCapMom = layout.create_cell("cap_cmomi", "SG13_dev", {"feed": "double"})
 pcellCapMomSame = layout.create_cell("cap_cmomi", "SG13_dev", {"feed": "same"})
 
+# MoM fringe capacitor (M1-M4 thin-metal stack; full stack and a reduced one)
+pcellCapMomf = layout.create_cell("cap_cmomf", "SG13_dev", {})
+pcellCapMomfM2M4 = layout.create_cell("cap_cmomf", "SG13_dev", {"mmin": 2, "mmax": 4})
+
 # Create top cell and place instances
 top = layout.create_cell("TOP")
 
@@ -124,6 +133,10 @@ top.insert(pya.DCellInstArray(pcellPnpMPA, pya.DTrans(pya.DVector(40, 80))))
 # Row 9: MoM capacitors (opposite-side and single-side feed)
 top.insert(pya.DCellInstArray(pcellCapMom, pya.DTrans(pya.DVector(0, 95))))
 top.insert(pya.DCellInstArray(pcellCapMomSame, pya.DTrans(pya.DVector(10, 95))))
+
+# Row 10: MoM fringe capacitors (full M1-M4 stack and an M2-M4 subset)
+top.insert(pya.DCellInstArray(pcellCapMomf, pya.DTrans(pya.DVector(0, 110))))
+top.insert(pya.DCellInstArray(pcellCapMomfM2M4, pya.DTrans(pya.DVector(10, 110))))
 
 # Large structures
 top.insert(pya.DCellInstArray(pcellBondpad, pya.DTrans(pya.DVector(40, 0))))
