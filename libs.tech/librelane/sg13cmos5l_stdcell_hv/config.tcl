@@ -23,19 +23,37 @@
 
 set current_folder [file dirname [file normalize [info script]]]
 
-# Technology lib -- one characterized corner so far. The IO liberty is
-# the closest existing file (no IO library is characterized against a
-# 3.3 V core); flagged for the maintainers, same as in IHP-Open-PDK#1103.
+# Technology lib -- the corners #1103 characterizes, each paired with the
+# CMOS5L IO Liberty at the matching supply. Built the same way as the HV
+# block in the G2 PDK config (a foreach with file-exists guards), so a
+# corner that is not installed simply does not appear instead of making
+# LibreLane fail on a missing path. No IO library is characterized against
+# a 3.3 V core; these are the closest existing files, flagged for the
+# maintainers exactly as in IHP-Open-PDK#1103.
 set ::env(LIB) [dict create]
-dict set ::env(LIB) nom_typ_3p30V_25C "\
-    $::env(PDK_ROOT)/$::env(PDK)/libs.ref/$::env(STD_CELL_LIBRARY)/lib/sg13cmos5l_stdcell_hv_typ_3p30V_25C.lib\
-    $::env(PDK_ROOT)/$::env(PDK)/libs.ref/sg13cmos5l_io/lib/sg13cmos5l_io_typ_1p5V_3p3V_25C.lib\
-"
+set _hv_corners [list]
+foreach {_pat _hv _io} {
+    "*_typ_3p30V_25C"   sg13cmos5l_stdcell_hv_typ_3p30V_25C   sg13cmos5l_io_typ_1p5V_3p3V_25C
+    "*_fast_3p60V_m40C" sg13cmos5l_stdcell_hv_fast_3p60V_m40C sg13cmos5l_io_fast_1p65V_3p6V_m40C
+    "*_slow_3p00V_125C" sg13cmos5l_stdcell_hv_slow_3p00V_125C sg13cmos5l_io_slow_1p35V_3p0V_125C
+} {
+    set _hvlib $::env(PDK_ROOT)/$::env(PDK)/libs.ref/$::env(STD_CELL_LIBRARY)/lib/$_hv.lib
+    set _iolib $::env(PDK_ROOT)/$::env(PDK)/libs.ref/sg13cmos5l_io/lib/$_io.lib
+    if { [file exists $_hvlib] } {
+        if { [file exists $_iolib] } {
+            dict set ::env(LIB) $_pat "$_hvlib $_iolib"
+        } else {
+            dict set ::env(LIB) $_pat "$_hvlib"
+        }
+        lappend _hv_corners "nom_[string trimleft $_pat {*_}]"
+    }
+}
 
 # Corners
-set ::env(STA_CORNERS) "nom_typ_3p30V_25C"
+set ::env(STA_CORNERS) [join $_hv_corners " "]
 set ::env(DEFAULT_CORNER) "nom_typ_3p30V_25C"
-set ::env(TIMING_VIOLATION_CORNERS) "*typ*"
+set ::env(TIMING_VIOLATION_CORNERS) "*"
+unset _hv_corners _pat _hv _io _hvlib _iolib
 
 # Thick-oxide core voltage (overrides the 1.20 V set at PDK level)
 set ::env(VDD_PIN_VOLTAGE) "3.30"
