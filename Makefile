@@ -97,6 +97,14 @@ test-cap-cmomi-sweep: env
 	@. $(VENV_RUN_COMMAND); python3 libs.tech/klayout/sg13cmos5l_tests/cap_cmomi_sweep.py
 
 #=================================
+# ---- test-cap-cmomf-sweep ------
+#=================================
+
+test-cap-cmomf-sweep: env
+	@. $(VENV_RUN_COMMAND); echo "Running cap_cmomf PCell DRC+LVS sweep"
+	@. $(VENV_RUN_COMMAND); python3 libs.tech/klayout/sg13cmos5l_tests/cap_cmomf_sweep.py
+
+#=================================
 # --------- test-gnucap ----------
 #=================================
 
@@ -132,6 +140,17 @@ test-gnucap:
 	  echo "  (they are a gitignored build product of the sibling PDK, so the"; \
 	  echo "   osdi/ symlinks here dangle until that runs, and the Ngspice half"; \
 	  echo "   would fail on its first test)"; \
+	elif [ ! -e "$$PDK_ROOT/ihp-sg13cmos5l/libs.tech/ngspice/osdi/cap_cmomi.osdi" ] || \
+	     [ ! -e "$$PDK_ROOT/ihp-sg13cmos5l/libs.tech/ngspice/models/cap_cmomi.lib" ] || \
+	     [ ! -e "$$PDK_ROOT/ihp-sg13cmos5l/libs.tech/ngspice/osdi/cap_cmomf.osdi" ] || \
+	     [ ! -e "$$PDK_ROOT/ihp-sg13cmos5l/libs.tech/ngspice/models/cap_cmomf.lib" ]; then \
+	  echo "Skipping: the installed ihp-sg13cmos5l predates the MoM capacitors"; \
+	  echo "  git -C \$$PDK_ROOT/ihp-sg13cmos5l pull"; \
+	  echo "  (unlike the OSDI above these two are tracked files, so a pull is the"; \
+	  echo "   fix rather than a build. The Ngspice capacitor test resolves them"; \
+	  echo "   through \$$PDK_ROOT/\$$PDK, i.e. the installed PDK and not this"; \
+	  echo "   working tree, so a checkout older than that merge fails on an"; \
+	  echo "   'Error opening osdi lib' that does not name the cause)"; \
 	else \
 	  echo "Running Gnucap regression for SG13CMOS5L devices"; \
 	  PDK=ihp-sg13cmos5l $(MAKE) -C libs.tech/gnucap check; \
@@ -152,6 +171,7 @@ help:
 	@echo "... test-LVS-cells             (Run LVS for all standard cells                )"
 	@echo "... test-LVS-switch            (Run simple LVS switching test                 )"
 	@echo "... test-cap-cmomi-sweep       (Run cap_cmomi PCell DRC+LVS configuration sweep)"
+	@echo "... test-cap-cmomf-sweep       (Run cap_cmomf PCell DRC+LVS configuration sweep)"
 	@echo "... test-gnucap                (Build model plugins, run the device regression)"
 
-.PHONY: env lint lint_python test-DRC-main test-LVS-main test-LVS-cells test-LVS-switch test-cap-cmomi-sweep test-gnucap help
+.PHONY: env lint lint_python test-DRC-main test-LVS-main test-LVS-cells test-LVS-switch test-cap-cmomi-sweep test-cap-cmomf-sweep test-gnucap help

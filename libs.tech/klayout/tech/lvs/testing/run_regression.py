@@ -19,8 +19,9 @@
 
 SG13CMOS5L supports CMOS-only devices with M1-M4-TM1 metal stack.
 Supported: MOS, RES, DIODE, ESD (diodevdd/vss, nmoscl), TAP, BJT (pnpMPA),
-           IND (inductor2, TopMetal1 winding)
-Excluded: RFMOS, CAP, MIM capacitors
+           IND (inductor2, TopMetal1 winding),
+           CAP (cap_cmomi, cap_cmomf, moscaps)
+Excluded: RFMOS, MIM capacitors
 
 Note on nBuLay (32/0) - FORBIDDEN per Layout Rules Section 3.2:
   The following devices use nBuLay (via nwell_iso derivation) and are excluded:
@@ -417,12 +418,14 @@ def run_regression(lvs_dir, output_path, target_device_group, cpu_count):
 
     # CMOS5L-compatible device groups only
     # Excluded from G2: RFMOS
-    # CAP: enabled for cap_cmomi (MoM, Metal1-Metal4). Two CAP-group devices
-    # stay excluded below: MIM caps (cap_cmim/rfcmim, forbidden MIM layer) and
-    # S-Varicap (needs cap_derivations nwell_iso -> nwell_drw). The moscaps
-    # (sg13_moscap_n/p) run: main carries their testcases and turning the group
-    # on must not take that away.
-    allowed_device_groups = ["MOS", "DIODE", "RES", "ESD", "TAP", "BJT", "CAP", "IND"]
+    # CAP: enabled for both MoM capacitors (cap_cmomi and cap_cmomf,
+    # Metal1-Metal4). Two CAP-group devices stay excluded below: MIM caps
+    # (cap_cmim/rfcmim, forbidden MIM layer) and S-Varicap (needs
+    # cap_derivations nwell_iso -> nwell_drw). The moscaps (sg13_moscap_n/p)
+    # run: main carries their testcases and turning the group on must not take
+    # that away.
+    allowed_device_groups = ["MOS", "DIODE", "RES", "ESD", "TAP", "BJT", "CAP",
+                             "IND"]
 
     # Devices excluded from CMOS5L - require forbidden layers per Section 3.2
     # Reference: SG13CMOS5L_os_layout_rules.pdf - nBuLay (32/0) is forbidden
@@ -456,6 +459,14 @@ def run_regression(lvs_dir, output_path, target_device_group, cpu_count):
         "idiodevss_4kv",
         # isolbox - isolation box requires nBuLay-based isolation layers
         "isolbox",
+        # Deep-nwell tap testcases, symlinked in from G2 (their PR #1032). All
+        # three draw nBuLay, so the forbidden-layer check aborts LVS before any
+        # comparison. They arrived with the .github/ihp-sg13g2.ref bump that
+        # brought the cap_cmomi extractor fix; taps themselves are supported and
+        # the rest of the TAP group runs.
+        "test_ntap_ptap_ext",
+        "test_ntap_ptap_ext_deep",
+        "test_ptap_dnw_ext",
     ]
 
     # Parse Existing devices
@@ -572,7 +583,8 @@ if __name__ == "__main__":
         "--device",
         type=str,
         default=None,
-        help="Target device group (MOS, DIODE, RES, ESD, TAP).",
+        help="Target device group (MOS, DIODE, RES, ESD, TAP, BJT, CAP, "
+             "IND).",
     )
     parser.add_argument(
         "--run_dir",
@@ -623,10 +635,11 @@ if __name__ == "__main__":
     pd.set_option("display.width", 1000)
 
     # selected device - CMOS5L only supports these device groups
-    # Excluded: RFMOS. CAP is enabled for cap_cmomi (other CAP-group devices
-    # are filtered by excluded_devices).
+    # Excluded: RFMOS. CAP is enabled for both MoM capacitors (other CAP-group
+    # devices are filtered by excluded_devices).
     # Keep in sync with allowed_device_groups in main().
-    allowed_devices = ["MOS", "DIODE", "RES", "ESD", "TAP", "BJT", "CAP", "IND"]
+    allowed_devices = ["MOS", "DIODE", "RES", "ESD", "TAP", "BJT", "CAP",
+                       "IND"]
     target_device_group = args.device
 
     if target_device_group and (target_device_group not in allowed_devices):
