@@ -11,11 +11,13 @@
 *
 * This is the one device in the suite whose SG13G2 reference data does not
 * transfer, which is why the ref/ here is regenerated rather than symlinked.
-* The reason is the testbench, not the model: SG13G2 instantiates mmax = 5 and
-* measures f_3dB ~ 78.24 MHz -> C ~ 20.34 fF, while mmax = 4 below puts the
-* corner near 97.6 MHz.  The two PDKs' cap_cmomi.va files agree on every
-* coefficient for Nlay <= 4, so this run does not discriminate between them and
-* is not a check on the modelgen include path.
+* Two things separate the two runs.  The testbench differs: SG13G2 instantiates
+* mmax = 5 where this one uses mmax = 4.  And the models now differ as well:
+* this PDK now bills the coupled rows the cell draws, floor(w/0.89), and charges
+* the opposite-side (double) feed term.  With mmax = 4, the corrected row count
+* and that feed term, the corner sits near 75.4 MHz -> C ~ 21.11 fF.  The
+* SG13G2 mmax = 5 twin now sits lower in frequency (larger C), so unlike before
+* the two runs are distinguishable.
 *
 * The cap_cmomi OSDI is loaded by the directory .spiceinit; cap_cmomi.lib (the
 * 2-terminal wrapper subckt, which ties SUB to ground) is resolved through the
