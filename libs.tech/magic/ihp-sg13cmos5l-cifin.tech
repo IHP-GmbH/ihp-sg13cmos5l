@@ -739,17 +739,17 @@ style  sg13cmos5l variants ()
  layer	polyfill POLYFILL
  labels POLYFILL
 
- # NOTE:  There is no device model for iprobe and diffprobe,
- # but they have a different GDS number and they should be
- # represented by alternative types of metal1 like obsm1,
- # instead of being converted to metal1 as done below.
-
  layer m1 MET1,MET1TXT,MET1PIN
  and-not MET1RES
  and-not MET1SLIT
  labels MET1
  labels MET1PIN port
  labels MET1TXT text
+
+ # NOTE:  There is no device model for iprobe and diffprobe,
+ # but they have a different GDS number and they should be
+ # represented by alternative types of metal1 like obsm1,
+ # instead of being converted to metal1 as done below.
 
  layer iprobe IPROBE
  labels IPROBE
@@ -867,11 +867,11 @@ style  sg13cmos5l variants ()
  # Handle contacts found by copyup
 
  templayer ndiccopy CONT
- and LI
+ and MET1
  and DIODE
  and DIFF
  and-not NWELL,nwelcheck
- and NSD
+ and-not PSD
  and-not THKOX,hvcheck
 
  layer ndic ndiccopy
